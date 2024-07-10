@@ -35,6 +35,8 @@ import org.apache.seatunnel.api.table.catalog.CatalogTable;
 import org.apache.seatunnel.api.table.catalog.TablePath;
 import org.apache.seatunnel.api.table.catalog.TableSchema;
 import org.apache.seatunnel.api.table.type.SeaTunnelRow;
+import org.apache.seatunnel.connectors.seatunnel.jdbc.catalog.cache.CacheCatalog;
+import org.apache.seatunnel.connectors.seatunnel.jdbc.catalog.cache.savemode.CacheSaveModeHandler;
 import org.apache.seatunnel.connectors.seatunnel.jdbc.catalog.iris.IrisCatalog;
 import org.apache.seatunnel.connectors.seatunnel.jdbc.catalog.iris.savemode.IrisSaveModeHandler;
 import org.apache.seatunnel.connectors.seatunnel.jdbc.catalog.utils.CatalogUtils;
@@ -215,6 +217,16 @@ public class JdbcSink
                     if (catalog instanceof IrisCatalog) {
                         return Optional.of(
                                 new IrisSaveModeHandler(
+                                        schemaSaveMode,
+                                        dataSaveMode,
+                                        catalog,
+                                        tablePath,
+                                        catalogTable,
+                                        config.get(JdbcOptions.CUSTOM_SQL)));
+                    }
+                    if (catalog instanceof CacheCatalog) {
+                        return Optional.of(
+                                new CacheSaveModeHandler(
                                         schemaSaveMode,
                                         dataSaveMode,
                                         catalog,
