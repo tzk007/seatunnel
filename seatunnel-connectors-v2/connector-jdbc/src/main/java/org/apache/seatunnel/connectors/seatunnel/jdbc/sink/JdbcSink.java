@@ -232,7 +232,8 @@ public class JdbcSink
                                         catalog,
                                         tablePath,
                                         catalogTable,
-                                        config.get(JdbcOptions.CUSTOM_SQL)));
+                                        config.get(JdbcOptions.CUSTOM_SQL),
+                                        jdbcSinkConfig.isCreateIndex()));
                     }
                     return Optional.of(
                             new JdbcSaveModeHandler(

@@ -23,14 +23,16 @@ public class CacheCreateTableSqlBuilder {
     private String fieldIde;
 
     private String comment;
+    private boolean createIndex;
 
-    public CacheCreateTableSqlBuilder(CatalogTable catalogTable) {
+    public CacheCreateTableSqlBuilder(CatalogTable catalogTable, boolean createIndex) {
         this.columns = catalogTable.getTableSchema().getColumns();
         this.primaryKey = catalogTable.getTableSchema().getPrimaryKey();
         this.constraintKeys = catalogTable.getTableSchema().getConstraintKeys();
         this.sourceCatalogName = catalogTable.getCatalogName();
         this.fieldIde = catalogTable.getOptions().get("fieldIde");
         this.comment = catalogTable.getComment();
+        this.createIndex = createIndex;
     }
 
     public String build(TablePath tablePath) {
@@ -47,12 +49,13 @@ public class CacheCreateTableSqlBuilder {
                         .collect(Collectors.toList());
 
         // Add primary key directly in the create table statement
-        if (primaryKey != null
+        if (createIndex
+                && primaryKey != null
                 && primaryKey.getColumnNames() != null
                 && primaryKey.getColumnNames().size() > 0) {
             columnSqls.add(buildPrimaryKeySql(primaryKey));
         }
-        if (CollectionUtils.isNotEmpty(constraintKeys)) {
+        if (createIndex && CollectionUtils.isNotEmpty(constraintKeys)) {
             for (ConstraintKey constraintKey : constraintKeys) {
                 if (StringUtils.isBlank(constraintKey.getConstraintName())
                         || (primaryKey != null
