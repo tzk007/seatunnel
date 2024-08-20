@@ -1,4 +1,21 @@
-package org.apache.seatunnel.connectors.seatunnel.jdbc.internal.dialect.cache;
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.seatunnel.connectors.seatunnel.jdbc.internal.dialect.trino;
 
 import org.apache.seatunnel.api.table.catalog.Column;
 import org.apache.seatunnel.api.table.catalog.PhysicalColumn;
@@ -11,89 +28,63 @@ import org.apache.seatunnel.common.exception.CommonError;
 import org.apache.seatunnel.connectors.seatunnel.jdbc.internal.dialect.DatabaseIdentifier;
 
 import com.google.auto.service.AutoService;
+import io.trino.jdbc.$internal.client.ClientStandardTypes;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Objects;
 
+// reference https://trino.io/docs/current/language/types.html
 @Slf4j
 @AutoService(TypeConverter.class)
-public class CacheTypeConverter implements TypeConverter<BasicTypeDefine> {
+public class TrinoTypeConverter implements TypeConverter<BasicTypeDefine<ClientStandardTypes>> {
+
     // ============================data types=====================
-    public static final String Cache_NULL = "NULL";
+    public static final String TRINO_NULL = "NULL";
 
     // -------------------------number----------------------------
-    public static final String Cache_NUMERIC = "NUMERIC";
-    public static final String Cache_MONEY = "MONEY";
-    public static final String Cache_SMALLMONEY = "SMALLMONEY";
-    public static final String Cache_NUMBER = "NUMBER";
-    public static final String Cache_DEC = "DEC";
-    public static final String Cache_DECIMAL = "DECIMAL";
-    public static final String Cache_INTEGER = "INTEGER";
-    public static final String Cache_INT = "INT";
-    public static final String Cache_ROWVERSION = "ROWVERSION";
-    public static final String Cache_BIGINT = "BIGINT";
-    public static final String Cache_SERIAL = "SERIAL";
+    public static final String TRINO_TINYINT = "TINYINT";
+    public static final String TRINO_SMALLINT = "SMALLINT";
+    public static final String TRINO_INTEGER = "INTEGER";
+    public static final String TRINO_INT = "INT";
+    public static final String TRINO_BIGINT = "BIGINT";
 
-    public static final String Cache_TINYINT = "TINYINT";
-    public static final String Cache_SMALLINT = "SMALLINT";
-    public static final String Cache_MEDIUMINT = "MEDIUMINT";
-    public static final String Cache_FLOAT = "FLOAT";
-    public static final String Cache_DOUBLE = "DOUBLE";
-    public static final String Cache_REAL = "REAL";
-    public static final String Cache_DOUBLE_PRECISION = "DOUBLE PRECISION";
+    public static final String TRINO_REAL = "REAL";
+    public static final String TRINO_DOUBLE = "DOUBLE";
+    public static final String TRINO_DECIMAL = "DECIMAL";
 
     // ----------------------------string-------------------------
-    public static final String Cache_CHAR = "CHAR";
-    public static final String Cache_CHAR_VARYING = "CHAR VARYING";
-    public static final String Cache_CHARACTER_VARYING = "CHARACTER VARYING";
-    public static final String Cache_NATIONAL_CHAR = "NATIONAL CHAR";
-    public static final String Cache_NATIONAL_CHAR_VARYING = "NATIONAL CHAR VARYING";
-    public static final String Cache_NATIONAL_CHARACTER = "NATIONAL CHARACTER";
-    public static final String Cache_NATIONAL_CHARACTER_VARYING = "NATIONAL CHARACTER VARYING";
-    public static final String Cache_NATIONAL_VARCHAR = "NATIONAL VARCHAR";
-    public static final String Cache_NCHAR = "NCHAR";
-    public static final String Cache_NVARCHAR = "NVARCHAR";
-    public static final String Cache_SYSNAME = "SYSNAME";
-    public static final String Cache_VARCHAR2 = "VARCHAR2";
-    public static final String Cache_VARCHAR = "VARCHAR";
-    public static final String Cache_UNIQUEIDENTIFIER = "UNIQUEIDENTIFIER";
-    public static final String Cache_GUID = "GUID";
-    public static final String Cache_CHARACTER = "CHARACTER";
-    public static final String Cache_NTEXT = "NTEXT";
-    public static final String Cache_CLOB = "CLOB";
-    public static final String Cache_LONG_VARCHAR = "LONG VARCHAR";
-    public static final String Cache_LONG = "LONG";
-    public static final String Cache_LONGTEXT = "LONGTEXT";
-    public static final String Cache_MEDIUMTEXT = "MEDIUMTEXT";
-    public static final String Cache_TEXT = "TEXT";
-    public static final String Cache_LONGVARCHAR = "LONGVARCHAR";
+    public static final String TRINO_CHAR = "CHAR";
+    public static final String TRINO_VARCHAR = "VARCHAR";
+    //    public static final String TRINO_JSON = "json";
 
     // ------------------------------time-------------------------
-    public static final String Cache_DATE = "DATE";
+    public static final String TRINO_DATE = "DATE";
 
-    public static final String Cache_TIME = "TIME";
+    public static final String TRINO_TIME = "TIME";
+    //    public static final String TRINO_TIME_WITH_TIME_ZONE = "time with time zone";
 
-    public static final String Cache_TIMESTAMP = "TIMESTAMP";
-    public static final String Cache_POSIXTIME = "POSIXTIME";
-    public static final String Cache_TIMESTAMP2 = "TIMESTAMP2";
-
-    public static final String Cache_DATETIME = "DATETIME";
-    public static final String Cache_SMALLDATETIME = "SMALLDATETIME";
-    public static final String Cache_DATETIME2 = "DATETIME2";
+    public static final String TRINO_TIMESTAMP = "TIMESTAMP";
+    //    public static final String TRINO_TIMESTAMP_WITH_TIME_ZONE = "timestamp with time zone";
+    //    public static final String TRINO_INTERVAL_DAY_TO_SECOND = "interval day to second";
+    //    public static final String TRINO_INTERVAL_YEAR_TO_MONTH = "interval year to month";
 
     // ---------------------------binary---------------------------
-    public static final String Cache_BINARY = "BINARY";
-    public static final String Cache_VARBINARY = "VARBINARY";
-    public static final String Cache_RAW = "RAW";
-    public static final String Cache_LONGVARBINARY = "LONGVARBINARY";
-    public static final String Cache_BINARY_VARYING = "BINARY VARYING";
-    public static final String Cache_BLOB = "BLOB";
-    public static final String Cache_IMAGE = "IMAGE";
-    public static final String Cache_LONG_BINARY = "LONG BINARY";
-    public static final String Cache_LONG_RAW = "LONG RAW";
+    public static final String TRINO_VARBINARY = "VARBINARY";
 
     // ---------------------------other---------------------------
-    public static final String Cache_BIT = "BIT";
+    public static final String TRINO_BOOLEAN = "BOOLEAN";
+    //    public static final String TRINO_UUID = "uuid";
+
+    //    public static final String TRINO_HYPER_LOG_LOG = "HyperLogLog";
+    //    public static final String TRINO_QDIGEST = "qdigest";
+    //    public static final String TRINO_P4_HYPER_LOG_LOG = "P4HyperLogLog";
+    //    public static final String TRINO_ROW = "row";
+    //    public static final String TRINO_ARRAY = "array";
+    //    public static final String TRINO_MAP = "map";
+    //    public static final String TRINO_IPADDRESS = "ipaddress";
+    //    public static final String TRINO_GEOMETRY = "Geometry";
+    //    public static final String TRINO_SPHERICAL_GEOGRAPHY = "SphericalGeography";
+    //    public static final String TRINO_BING_TILE = "BingTile";
 
     public static final int MAX_SCALE = 18;
     public static final int DEFAULT_SCALE = 0;
@@ -103,11 +94,11 @@ public class CacheTypeConverter implements TypeConverter<BasicTypeDefine> {
     public static final long GUID_LENGTH = 36;
     public static final long MAX_VARCHAR_LENGTH = Integer.MAX_VALUE;
     public static final long MAX_BINARY_LENGTH = Integer.MAX_VALUE;
-    public static final CacheTypeConverter INSTANCE = new CacheTypeConverter();
+    public static final TrinoTypeConverter INSTANCE = new TrinoTypeConverter();
 
     @Override
     public String identifier() {
-        return DatabaseIdentifier.CACHE;
+        return DatabaseIdentifier.TRINO;
     }
 
     @Override
@@ -122,22 +113,14 @@ public class CacheTypeConverter implements TypeConverter<BasicTypeDefine> {
                         .nullable(typeDefine.isNullable())
                         .defaultValue(typeDefine.getDefaultValue())
                         .comment(typeDefine.getComment());
-        String CacheDataType = typeDefine.getDataType().toUpperCase();
+        String TrinoDataType = typeDefine.getDataType().toUpperCase();
         long charOrBinaryLength =
                 Objects.nonNull(typeDefineLength) && typeDefineLength > 0 ? typeDefineLength : 1;
-        switch (CacheDataType) {
-            case Cache_NULL:
+        switch (TrinoDataType) {
+            case TRINO_NULL:
                 builder.dataType(BasicType.VOID_TYPE);
                 break;
-            case Cache_BIT:
-                builder.dataType(BasicType.BOOLEAN_TYPE);
-                break;
-            case Cache_NUMERIC:
-            case Cache_MONEY:
-            case Cache_SMALLMONEY:
-            case Cache_NUMBER:
-            case Cache_DEC:
-            case Cache_DECIMAL:
+            case TRINO_DECIMAL:
                 DecimalType decimalType;
                 if (typeDefine.getPrecision() != null && typeDefine.getPrecision() > 0) {
                     decimalType =
@@ -150,98 +133,53 @@ public class CacheTypeConverter implements TypeConverter<BasicTypeDefine> {
                 builder.columnLength(Long.valueOf(decimalType.getPrecision()));
                 builder.scale(decimalType.getScale());
                 break;
-            case Cache_INT:
-            case Cache_INTEGER:
-            case Cache_MEDIUMINT:
+            case TRINO_INT:
+            case TRINO_INTEGER:
                 builder.dataType(BasicType.INT_TYPE);
                 break;
-            case Cache_ROWVERSION:
-            case Cache_BIGINT:
-            case Cache_SERIAL:
+            case TRINO_BIGINT:
                 builder.dataType(BasicType.LONG_TYPE);
                 break;
-            case Cache_TINYINT:
+            case TRINO_TINYINT:
                 builder.dataType(BasicType.BYTE_TYPE);
                 break;
-            case Cache_SMALLINT:
+            case TRINO_SMALLINT:
                 builder.dataType(BasicType.SHORT_TYPE);
                 break;
-            case Cache_FLOAT:
-                builder.dataType(BasicType.FLOAT_TYPE);
-                break;
-            case Cache_DOUBLE:
-            case Cache_REAL:
-            case Cache_DOUBLE_PRECISION:
+            case TRINO_DOUBLE:
+            case TRINO_REAL:
                 builder.dataType(BasicType.DOUBLE_TYPE);
                 break;
-            case Cache_CHAR:
-            case Cache_CHAR_VARYING:
-            case Cache_CHARACTER_VARYING:
-            case Cache_NATIONAL_CHAR:
-            case Cache_NATIONAL_CHAR_VARYING:
-            case Cache_NATIONAL_CHARACTER:
-            case Cache_NATIONAL_CHARACTER_VARYING:
-            case Cache_NATIONAL_VARCHAR:
-            case Cache_NCHAR:
-            case Cache_SYSNAME:
-            case Cache_VARCHAR2:
-            case Cache_VARCHAR:
-            case Cache_NVARCHAR:
-            case Cache_UNIQUEIDENTIFIER:
-            case Cache_GUID:
-            case Cache_CHARACTER:
+            case TRINO_CHAR:
+            case TRINO_VARCHAR:
                 builder.dataType(BasicType.STRING_TYPE);
                 builder.columnLength(charOrBinaryLength);
                 break;
-            case Cache_NTEXT:
-            case Cache_CLOB:
-            case Cache_LONG_VARCHAR:
-            case Cache_LONG:
-            case Cache_LONGTEXT:
-            case Cache_MEDIUMTEXT:
-            case Cache_TEXT:
-            case Cache_LONGVARCHAR:
-                builder.dataType(BasicType.STRING_TYPE);
-                builder.columnLength(Long.valueOf(Integer.MAX_VALUE));
-                break;
-            case Cache_DATE:
+            case TRINO_DATE:
                 //                builder.dataType(LocalTimeType.LOCAL_DATE_TYPE);
                 builder.dataType(BasicType.STRING_TYPE);
                 builder.columnLength(charOrBinaryLength);
                 break;
-            case Cache_TIME:
+            case TRINO_TIME:
                 builder.dataType(BasicType.STRING_TYPE);
                 builder.columnLength(charOrBinaryLength);
                 //                builder.dataType(LocalTimeType.LOCAL_TIME_TYPE);
                 break;
-            case Cache_DATETIME:
-            case Cache_DATETIME2:
-            case Cache_SMALLDATETIME:
-            case Cache_TIMESTAMP:
-            case Cache_TIMESTAMP2:
-            case Cache_POSIXTIME:
+            case TRINO_TIMESTAMP:
                 builder.dataType(BasicType.STRING_TYPE);
                 builder.columnLength(charOrBinaryLength);
                 //                builder.dataType(LocalTimeType.LOCAL_DATE_TIME_TYPE);
                 break;
-            case Cache_BINARY:
-            case Cache_BINARY_VARYING:
-            case Cache_RAW:
-            case Cache_VARBINARY:
+            case TRINO_VARBINARY:
                 builder.dataType(PrimitiveByteArrayType.INSTANCE);
                 builder.columnLength(charOrBinaryLength);
                 break;
-            case Cache_LONGVARBINARY:
-            case Cache_BLOB:
-            case Cache_IMAGE:
-            case Cache_LONG_BINARY:
-            case Cache_LONG_RAW:
-                builder.dataType(PrimitiveByteArrayType.INSTANCE);
-                builder.columnLength(Long.valueOf(Integer.MAX_VALUE));
+            case TRINO_BOOLEAN:
+                builder.dataType(BasicType.BOOLEAN_TYPE);
                 break;
             default:
                 throw CommonError.convertToSeaTunnelTypeError(
-                        DatabaseIdentifier.CACHE, CacheDataType, typeDefine.getName());
+                        DatabaseIdentifier.TRINO, TrinoDataType, typeDefine.getName());
         }
         return builder.build();
     }
@@ -259,49 +197,44 @@ public class CacheTypeConverter implements TypeConverter<BasicTypeDefine> {
                         .defaultValue(column.getDefaultValue());
         switch (column.getDataType().getSqlType()) {
             case NULL:
-                builder.columnType(Cache_NULL);
-                builder.dataType(Cache_NULL);
+                builder.columnType(TRINO_NULL);
+                builder.dataType(TRINO_NULL);
                 break;
             case STRING:
                 if (column.getColumnLength() == null || column.getColumnLength() <= 0) {
-                    builder.columnType(String.format("%s(%s)", Cache_VARCHAR, MAX_VARCHAR_LENGTH));
-                    builder.dataType(Cache_VARCHAR);
+                    builder.columnType(String.format("%s(%s)", TRINO_VARCHAR, MAX_VARCHAR_LENGTH));
+                    builder.dataType(TRINO_VARCHAR);
                 } else if (column.getColumnLength() < MAX_VARCHAR_LENGTH) {
                     builder.columnType(
-                            String.format("%s(%s)", Cache_VARCHAR, column.getColumnLength()));
-                    builder.dataType(Cache_VARCHAR);
+                            String.format("%s(%s)", TRINO_VARCHAR, column.getColumnLength()));
+                    builder.dataType(TRINO_VARCHAR);
                 } else {
-                    builder.columnType(Cache_LONG_VARCHAR);
-                    builder.dataType(Cache_LONG_VARCHAR);
+
                 }
                 break;
             case BOOLEAN:
-                builder.columnType(Cache_BIT);
-                builder.dataType(Cache_BIT);
                 break;
             case TINYINT:
-                builder.columnType(Cache_TINYINT);
-                builder.dataType(Cache_TINYINT);
+                builder.columnType(TRINO_TINYINT);
+                builder.dataType(TRINO_TINYINT);
                 break;
             case SMALLINT:
-                builder.columnType(Cache_SMALLINT);
-                builder.dataType(Cache_SMALLINT);
+                builder.columnType(TRINO_SMALLINT);
+                builder.dataType(TRINO_SMALLINT);
                 break;
             case INT:
-                builder.columnType(Cache_INTEGER);
-                builder.dataType(Cache_INTEGER);
+                builder.columnType(TRINO_INTEGER);
+                builder.dataType(TRINO_INTEGER);
                 break;
             case BIGINT:
-                builder.columnType(Cache_BIGINT);
-                builder.dataType(Cache_BIGINT);
+                builder.columnType(TRINO_BIGINT);
+                builder.dataType(TRINO_BIGINT);
                 break;
             case FLOAT:
-                builder.columnType(Cache_FLOAT);
-                builder.dataType(Cache_FLOAT);
                 break;
             case DOUBLE:
-                builder.columnType(Cache_DOUBLE);
-                builder.dataType(Cache_DOUBLE);
+                builder.columnType(TRINO_DOUBLE);
+                builder.dataType(TRINO_DOUBLE);
                 break;
             case DECIMAL:
                 DecimalType decimalType = (DecimalType) column.getDataType();
@@ -360,30 +293,17 @@ public class CacheTypeConverter implements TypeConverter<BasicTypeDefine> {
                             precision,
                             scale);
                 }
-                builder.columnType(String.format("%s(%s,%s)", Cache_DECIMAL, precision, scale));
-                builder.dataType(Cache_DECIMAL);
+                builder.columnType(String.format("%s(%s,%s)", TRINO_DECIMAL, precision, scale));
+                builder.dataType(TRINO_DECIMAL);
                 builder.precision(precision);
                 builder.scale(scale);
                 break;
-            case BYTES:
-                if (column.getColumnLength() == null || column.getColumnLength() <= 0) {
-                    builder.columnType(Cache_LONG_BINARY);
-                    builder.dataType(Cache_LONG_BINARY);
-                } else if (column.getColumnLength() < MAX_BINARY_LENGTH) {
-                    builder.dataType(Cache_BINARY);
-                    builder.columnType(
-                            String.format("%s(%s)", Cache_BINARY, column.getColumnLength()));
-                } else {
-                    builder.columnType(Cache_LONG_BINARY);
-                    builder.dataType(Cache_LONG_BINARY);
-                }
-                break;
             case DATE:
-                builder.columnType(Cache_DATE);
-                builder.dataType(Cache_DATE);
+                builder.columnType(TRINO_DATE);
+                builder.dataType(TRINO_DATE);
                 break;
             case TIME:
-                builder.dataType(Cache_TIME);
+                builder.dataType(TRINO_TIME);
                 if (Objects.nonNull(column.getScale()) && column.getScale() > 0) {
                     Integer timeScale = column.getScale();
                     if (timeScale > MAX_TIME_SCALE) {
@@ -397,20 +317,20 @@ public class CacheTypeConverter implements TypeConverter<BasicTypeDefine> {
                                 MAX_TIME_SCALE,
                                 timeScale);
                     }
-                    builder.columnType(String.format("%s(%s)", Cache_TIME, timeScale));
+                    builder.columnType(String.format("%s(%s)", TRINO_TIME, timeScale));
                     builder.scale(timeScale);
                 } else {
-                    builder.columnType(Cache_TIME);
+                    builder.columnType(TRINO_TIME);
                 }
                 break;
             case TIMESTAMP:
-                builder.columnType(Cache_TIMESTAMP2);
-                builder.dataType(Cache_TIMESTAMP2);
+                builder.columnType(TRINO_TIMESTAMP);
+                builder.dataType(TRINO_TIMESTAMP);
                 break;
 
             default:
                 throw CommonError.convertToConnectorTypeError(
-                        DatabaseIdentifier.CACHE,
+                        DatabaseIdentifier.TRINO,
                         column.getDataType().getSqlType().name(),
                         column.getName());
         }

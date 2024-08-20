@@ -43,4 +43,5 @@ public class DatabaseIdentifier {
     public static final String IRIS = "IRIS";
     public static final String CACHE = "Cache";
     public static final String INCEPTOR = "Inceptor";
+    public static final String TRINO = "Trino";
 }
