@@ -44,7 +44,6 @@ public class CacheCatalog extends AbstractJdbcCatalog {
     public CacheCatalog(
             String catalogName, String username, String password, JdbcUrlUtil.UrlInfo urlInfo) {
         super(catalogName, username, password, urlInfo, null);
-        SYS_DATABASES.add("%SYS");
     }
 
     @Override

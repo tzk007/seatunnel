@@ -44,7 +44,6 @@ public class TrinoCatalog extends AbstractJdbcCatalog {
     public TrinoCatalog(
             String catalogName, String username, String password, JdbcUrlUtil.UrlInfo urlInfo) {
         super(catalogName, username, password, urlInfo, null);
-        SYS_DATABASES.add("%SYS");
     }
 
     @Override
