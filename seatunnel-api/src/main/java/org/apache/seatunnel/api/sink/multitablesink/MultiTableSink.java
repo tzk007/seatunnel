@@ -25,14 +25,19 @@ import org.apache.seatunnel.api.sink.SinkAggregatedCommitter;
 import org.apache.seatunnel.api.sink.SinkCommitter;
 import org.apache.seatunnel.api.sink.SinkCommonOptions;
 import org.apache.seatunnel.api.sink.SinkWriter;
+import org.apache.seatunnel.api.sink.SupportSchemaEvolutionSink;
+import org.apache.seatunnel.api.table.catalog.CatalogTable;
 import org.apache.seatunnel.api.table.catalog.TablePath;
 import org.apache.seatunnel.api.table.factory.MultiTableFactoryContext;
+import org.apache.seatunnel.api.table.schema.SchemaChangeType;
 import org.apache.seatunnel.api.table.type.SeaTunnelRow;
 
 import lombok.Getter;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -42,12 +47,13 @@ import java.util.stream.Collectors;
 
 public class MultiTableSink
         implements SeaTunnelSink<
-                SeaTunnelRow,
-                MultiTableState,
-                MultiTableCommitInfo,
-                MultiTableAggregatedCommitInfo> {
+                        SeaTunnelRow,
+                        MultiTableState,
+                        MultiTableCommitInfo,
+                        MultiTableAggregatedCommitInfo>,
+                SupportSchemaEvolutionSink {
 
-    @Getter private final Map<String, SeaTunnelSink> sinks;
+    @Getter private final Map<TablePath, SeaTunnelSink> sinks;
     private final int replicaNum;
 
     public MultiTableSink(MultiTableFactoryContext context) {
@@ -66,12 +72,13 @@ public class MultiTableSink
         Map<SinkIdentifier, SinkWriter<SeaTunnelRow, ?, ?>> writers = new HashMap<>();
         Map<SinkIdentifier, SinkWriter.Context> sinkWritersContext = new HashMap<>();
         for (int i = 0; i < replicaNum; i++) {
-            for (String tableIdentifier : sinks.keySet()) {
-                SeaTunnelSink sink = sinks.get(tableIdentifier);
+            for (TablePath tablePath : sinks.keySet()) {
+                SeaTunnelSink sink = sinks.get(tablePath);
                 int index = context.getIndexOfSubtask() * replicaNum + i;
+                String tableIdentifier = tablePath.toString();
                 writers.put(
                         SinkIdentifier.of(tableIdentifier, index),
-                        sink.createWriter(new SinkContextProxy(index, context)));
+                        sink.createWriter(new SinkContextProxy(index, replicaNum, context)));
                 sinkWritersContext.put(SinkIdentifier.of(tableIdentifier, index), context);
             }
         }
@@ -85,10 +92,10 @@ public class MultiTableSink
         Map<SinkIdentifier, SinkWriter.Context> sinkWritersContext = new HashMap<>();
 
         for (int i = 0; i < replicaNum; i++) {
-            for (String tableIdentifier : sinks.keySet()) {
-                SeaTunnelSink sink = sinks.get(tableIdentifier);
+            for (TablePath tablePath : sinks.keySet()) {
+                SeaTunnelSink sink = sinks.get(tablePath);
                 int index = context.getIndexOfSubtask() * replicaNum + i;
-                SinkIdentifier sinkIdentifier = SinkIdentifier.of(tableIdentifier, index);
+                SinkIdentifier sinkIdentifier = SinkIdentifier.of(tablePath.toString(), index);
                 List<?> state =
                         states.stream()
                                 .map(
@@ -100,13 +107,14 @@ public class MultiTableSink
                 if (state.isEmpty()) {
                     writers.put(
                             sinkIdentifier,
-                            sink.createWriter(new SinkContextProxy(index, context)));
+                            sink.createWriter(new SinkContextProxy(index, replicaNum, context)));
                 } else {
                     writers.put(
                             sinkIdentifier,
-                            sink.restoreWriter(new SinkContextProxy(index, context), state));
+                            sink.restoreWriter(
+                                    new SinkContextProxy(index, replicaNum, context), state));
                 }
-                sinkWritersContext.put(SinkIdentifier.of(tableIdentifier, index), context);
+                sinkWritersContext.put(sinkIdentifier, context);
             }
         }
         return new MultiTableSinkWriter(writers, replicaNum, sinkWritersContext);
@@ -120,12 +128,13 @@ public class MultiTableSink
     @Override
     public Optional<SinkCommitter<MultiTableCommitInfo>> createCommitter() throws IOException {
         Map<String, SinkCommitter<?>> committers = new HashMap<>();
-        for (String tableIdentifier : sinks.keySet()) {
-            SeaTunnelSink sink = sinks.get(tableIdentifier);
+        for (TablePath tablePath : sinks.keySet()) {
+            SeaTunnelSink sink = sinks.get(tablePath);
             sink.createCommitter()
                     .ifPresent(
                             committer ->
-                                    committers.put(tableIdentifier, (SinkCommitter<?>) committer));
+                                    committers.put(
+                                            tablePath.toString(), (SinkCommitter<?>) committer));
         }
         if (committers.isEmpty()) {
             return Optional.empty();
@@ -142,12 +151,12 @@ public class MultiTableSink
     public Optional<SinkAggregatedCommitter<MultiTableCommitInfo, MultiTableAggregatedCommitInfo>>
             createAggregatedCommitter() throws IOException {
         Map<String, SinkAggregatedCommitter<?, ?>> aggCommitters = new HashMap<>();
-        for (String tableIdentifier : sinks.keySet()) {
-            SeaTunnelSink sink = sinks.get(tableIdentifier);
+        for (TablePath tablePath : sinks.keySet()) {
+            SeaTunnelSink sink = sinks.get(tablePath);
             Optional<SinkAggregatedCommitter<?, ?>> sinkOptional = sink.createAggregatedCommitter();
             sinkOptional.ifPresent(
                     sinkAggregatedCommitter ->
-                            aggCommitters.put(tableIdentifier, sinkAggregatedCommitter));
+                            aggCommitters.put(tablePath.toString(), sinkAggregatedCommitter));
         }
         if (aggCommitters.isEmpty()) {
             return Optional.empty();
@@ -156,7 +165,18 @@ public class MultiTableSink
     }
 
     public List<TablePath> getSinkTables() {
-        return sinks.keySet().stream().map(TablePath::of).collect(Collectors.toList());
+
+        List<TablePath> tablePaths = new ArrayList<>();
+        List<SeaTunnelSink> values = new ArrayList<>(sinks.values());
+        for (int i = 0; i < values.size(); i++) {
+            if (values.get(i).getWriteCatalogTable().isPresent()) {
+                tablePaths.add(
+                        ((CatalogTable) values.get(i).getWriteCatalogTable().get()).getTablePath());
+            } else {
+                tablePaths.add(sinks.keySet().toArray(new TablePath[0])[i]);
+            }
+        }
+        return tablePaths;
     }
 
     @Override
@@ -168,5 +188,19 @@ public class MultiTableSink
     @Override
     public void setJobContext(JobContext jobContext) {
         sinks.values().forEach(sink -> sink.setJobContext(jobContext));
+    }
+
+    @Override
+    public Optional<CatalogTable> getWriteCatalogTable() {
+        return SeaTunnelSink.super.getWriteCatalogTable();
+    }
+
+    @Override
+    public List<SchemaChangeType> supports() {
+        SeaTunnelSink firstSink = sinks.entrySet().iterator().next().getValue();
+        if (firstSink instanceof SupportSchemaEvolutionSink) {
+            return ((SupportSchemaEvolutionSink) firstSink).supports();
+        }
+        return Collections.emptyList();
     }
 }

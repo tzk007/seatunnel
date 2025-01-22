@@ -24,8 +24,9 @@ import org.apache.seatunnel.api.table.catalog.TablePath;
 import org.apache.seatunnel.api.table.catalog.TableSchema;
 import org.apache.seatunnel.api.table.converter.BasicTypeDefine;
 import org.apache.seatunnel.api.table.converter.TypeConverter;
-import org.apache.seatunnel.connectors.doris.config.DorisOptions;
+import org.apache.seatunnel.connectors.doris.config.DorisSinkOptions;
 import org.apache.seatunnel.connectors.seatunnel.common.sql.template.SqlTemplate;
+import org.apache.seatunnel.connectors.seatunnel.common.util.CreateTableParser;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -36,10 +37,11 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.seatunnel.shade.com.google.common.base.Preconditions.checkNotNull;
 
 @Slf4j
 public class DorisCatalogUtil {
@@ -155,7 +157,7 @@ public class DorisCatalogUtil {
                 SaveModePlaceHolder.ROWTYPE_PRIMARY_KEY.getPlaceHolder(),
                 primaryKey,
                 tablePath.getFullName(),
-                DorisOptions.SAVE_MODE_CREATE_TEMPLATE.key());
+                DorisSinkOptions.SAVE_MODE_CREATE_TEMPLATE.key());
         template =
                 template.replaceAll(
                         SaveModePlaceHolder.ROWTYPE_PRIMARY_KEY.getReplacePlaceHolder(),
@@ -165,7 +167,7 @@ public class DorisCatalogUtil {
                 SaveModePlaceHolder.ROWTYPE_UNIQUE_KEY.getPlaceHolder(),
                 uniqueKey,
                 tablePath.getFullName(),
-                DorisOptions.SAVE_MODE_CREATE_TEMPLATE.key());
+                DorisSinkOptions.SAVE_MODE_CREATE_TEMPLATE.key());
         template =
                 template.replaceAll(
                         SaveModePlaceHolder.ROWTYPE_UNIQUE_KEY.getReplacePlaceHolder(), uniqueKey);
@@ -174,7 +176,7 @@ public class DorisCatalogUtil {
                 SaveModePlaceHolder.ROWTYPE_DUPLICATE_KEY.getPlaceHolder(),
                 dupKey,
                 tablePath.getFullName(),
-                DorisOptions.SAVE_MODE_CREATE_TEMPLATE.key());
+                DorisSinkOptions.SAVE_MODE_CREATE_TEMPLATE.key());
         template =
                 template.replaceAll(
                         SaveModePlaceHolder.ROWTYPE_DUPLICATE_KEY.getReplacePlaceHolder(), dupKey);
@@ -204,7 +206,10 @@ public class DorisCatalogUtil {
                 .replaceAll(
                         SaveModePlaceHolder.TABLE.getReplacePlaceHolder(), tablePath.getTableName())
                 .replaceAll(
-                        SaveModePlaceHolder.ROWTYPE_FIELDS.getReplacePlaceHolder(), rowTypeFields);
+                        SaveModePlaceHolder.ROWTYPE_FIELDS.getReplacePlaceHolder(), rowTypeFields)
+                .replaceAll(
+                        SaveModePlaceHolder.COMMENT.getReplacePlaceHolder(),
+                        Objects.isNull(catalogTable.getComment()) ? "" : catalogTable.getComment());
     }
 
     private static String mergeColumnInTemplate(
@@ -252,9 +257,12 @@ public class DorisCatalogUtil {
             Column column, TypeConverter<BasicTypeDefine> typeConverter) {
         checkNotNull(column, "The column is required.");
         return String.format(
-                "`%s` %s %s ",
+                "`%s` %s %s %s",
                 column.getName(),
                 typeConverter.reconvert(column).getColumnType(),
-                column.isNullable() ? "NULL" : "NOT NULL");
+                column.isNullable() ? "NULL" : "NOT NULL",
+                StringUtils.isEmpty(column.getComment())
+                        ? ""
+                        : "COMMENT '" + column.getComment() + "'");
     }
 }

@@ -21,9 +21,13 @@ import org.apache.seatunnel.shade.com.fasterxml.jackson.core.JsonProcessingExcep
 import org.apache.seatunnel.shade.com.fasterxml.jackson.databind.JsonNode;
 import org.apache.seatunnel.shade.com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.seatunnel.shade.com.fasterxml.jackson.databind.node.ObjectNode;
+import org.apache.seatunnel.shade.com.google.common.collect.Lists;
+import org.apache.seatunnel.shade.com.google.common.collect.Maps;
 
 import org.apache.seatunnel.api.configuration.ReadonlyConfig;
 import org.apache.seatunnel.api.table.catalog.TablePath;
+import org.apache.seatunnel.api.table.catalog.exception.DatabaseAlreadyExistException;
+import org.apache.seatunnel.api.table.catalog.exception.DatabaseNotExistException;
 import org.apache.seatunnel.api.table.converter.BasicTypeDefine;
 import org.apache.seatunnel.common.utils.JsonUtils;
 import org.apache.seatunnel.connectors.seatunnel.elasticsearch.catalog.ElasticSearchCatalog;
@@ -33,13 +37,12 @@ import org.apache.seatunnel.connectors.seatunnel.elasticsearch.dto.BulkResponse;
 import org.apache.seatunnel.connectors.seatunnel.elasticsearch.dto.source.ScrollResult;
 import org.apache.seatunnel.e2e.common.TestResource;
 import org.apache.seatunnel.e2e.common.TestSuiteBase;
-import org.apache.seatunnel.e2e.common.container.EngineType;
 import org.apache.seatunnel.e2e.common.container.TestContainer;
-import org.apache.seatunnel.e2e.common.junit.DisabledOnContainer;
 import org.apache.seatunnel.e2e.common.util.ContainerUtil;
 
 import org.apache.commons.io.IOUtils;
 
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -52,8 +55,6 @@ import org.testcontainers.lifecycle.Startables;
 import org.testcontainers.utility.DockerImageName;
 import org.testcontainers.utility.DockerLoggerFactory;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
@@ -75,6 +76,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.Function;
@@ -131,6 +133,7 @@ public class ElasticsearchIT extends TestSuiteBase implements TestResource {
         createIndexDocs();
         createIndexWithFullType();
         createIndexForResourceNull("st_index4");
+        createIndexWithNestType();
     }
 
     /** create a index,and bulk some documents */
@@ -152,6 +155,31 @@ public class ElasticsearchIT extends TestSuiteBase implements TestResource {
             requestBody.append("\n");
         }
         esRestClient.bulk(requestBody.toString());
+    }
+
+    private void createIndexWithNestType() throws IOException, InterruptedException {
+        String mapping =
+                IOUtils.toString(
+                        ContainerUtil.getResourcesFile("/elasticsearch/st_index_nest_mapping.json")
+                                .toURI(),
+                        StandardCharsets.UTF_8);
+        esRestClient.createIndex("st_index_nest", mapping);
+        esRestClient.createIndex("st_index_nest_copy", mapping);
+        BulkResponse response =
+                esRestClient.bulk(
+                        "{ \"index\" : { \"_index\" : \"st_index_nest\", \"_id\" : \"1\" } }\n"
+                                + IOUtils.toString(
+                                                ContainerUtil.getResourcesFile(
+                                                                "/elasticsearch/st_index_nest_data.json")
+                                                        .toURI(),
+                                                StandardCharsets.UTF_8)
+                                        .replace("\n", "")
+                                + "\n");
+        Assertions.assertFalse(response.isErrors(), response.getResponse());
+        // waiting index refresh
+        Thread.sleep(INDEX_REFRESH_MILL_DELAY);
+        Assertions.assertEquals(
+                3, esRestClient.getIndexDocsCount("st_index_nest").get(0).getDocsCount());
     }
 
     private void createIndexWithFullType() throws IOException, InterruptedException {
@@ -201,10 +229,21 @@ public class ElasticsearchIT extends TestSuiteBase implements TestResource {
     }
 
     @TestTemplate
-    @DisabledOnContainer(
-            value = {},
-            type = {EngineType.FLINK},
-            disabledReason = "Currently FLINK do not support multiple table read")
+    public void testElasticsearchWithNestSchema(TestContainer container)
+            throws IOException, InterruptedException {
+        Container.ExecResult execResult =
+                container.executeJob("/elasticsearch/elasticsearch_source_and_sink_with_nest.conf");
+        Assertions.assertEquals(0, execResult.getExitCode());
+
+        List<String> sinkData = readSinkDataWithNestSchema("st_index_nest_copy");
+        String data =
+                "{\"address\":[{\"zipcode\":\"10001\",\"city\":\"New York\",\"street\":\"123 Main St\"},"
+                        + "{\"zipcode\":\"90001\",\"city\":\"Los Angeles\",\"street\":\"456 Elm St\"}],\"name\":\"John Doe\"}";
+
+        Assertions.assertIterableEquals(Lists.newArrayList(data), sinkData);
+    }
+
+    @TestTemplate
     public void testElasticsSearchWithMultiSourceByFilter(TestContainer container)
             throws InterruptedException, IOException {
         // read read_filter_index1,read_filter_index2
@@ -305,10 +344,6 @@ public class ElasticsearchIT extends TestSuiteBase implements TestResource {
         Assertions.assertEquals(0, sinkData2.size());
     }
 
-    @DisabledOnContainer(
-            value = {},
-            type = {EngineType.FLINK},
-            disabledReason = "Currently FLINK do not support multiple table read")
     @TestTemplate
     public void testElasticsearchWithMultiSink(TestContainer container)
             throws IOException, InterruptedException {
@@ -358,6 +393,37 @@ public class ElasticsearchIT extends TestSuiteBase implements TestResource {
         Assertions.assertEquals(
                 1,
                 esRestClient.getIndexDocsCount("st_index_full_type_target").get(0).getDocsCount());
+    }
+
+    @TestTemplate
+    public void testFakeSourceToElasticsearchWithUpperCaseIndex(TestContainer container) {
+        CompletableFuture.supplyAsync(
+                () -> {
+                    try {
+                        Container.ExecResult execResult =
+                                container.executeJob(
+                                        "/elasticsearch/fakesource_to_elasticsearch_with_upper_case_index.conf");
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                    return null;
+                });
+        Awaitility.await()
+                .atMost(120, TimeUnit.SECONDS)
+                .ignoreExceptions()
+                .pollInterval(3, TimeUnit.SECONDS)
+                .pollDelay(10, TimeUnit.SECONDS)
+                .untilAsserted(
+                        () -> {
+                            Assertions.assertEquals(
+                                    20,
+                                    esRestClient
+                                            .getIndexDocsCount("st_fake_table")
+                                            .get(0)
+                                            .getDocsCount());
+                        });
     }
 
     @TestTemplate
@@ -521,6 +587,13 @@ public class ElasticsearchIT extends TestSuiteBase implements TestResource {
         return getDocsWithTransformTimestamp(source, index);
     }
 
+    private List<String> readSinkDataWithNestSchema(String index) throws InterruptedException {
+        // wait for index refresh
+        Thread.sleep(INDEX_REFRESH_MILL_DELAY);
+        List<String> source = Lists.newArrayList("name", "address");
+        return getDocsWithNestType(source, index);
+    }
+
     private List<String> readMultiSinkData(String index, List<String> source)
             throws InterruptedException {
         // wait for index refresh
@@ -574,6 +647,25 @@ public class ElasticsearchIT extends TestSuiteBase implements TestResource {
                         .sorted(
                                 Comparator.comparingInt(
                                         o -> Integer.valueOf(o.get("c_int").toString())))
+                        .map(JsonUtils::toJsonString)
+                        .collect(Collectors.toList());
+        return docs;
+    }
+
+    private List<String> getDocsWithNestType(List<String> source, String index) {
+        Map<String, Object> query = new HashMap<>();
+        query.put("match_all", new HashMap<>());
+        ScrollResult scrollResult = esRestClient.searchByScroll(index, source, query, "1m", 1000);
+        scrollResult
+                .getDocs()
+                .forEach(
+                        x -> {
+                            x.remove("_index");
+                            x.remove("_type");
+                            x.remove("_id");
+                        });
+        List<String> docs =
+                scrollResult.getDocs().stream()
                         .map(JsonUtils::toJsonString)
                         .collect(Collectors.toList());
         return docs;
@@ -714,6 +806,13 @@ public class ElasticsearchIT extends TestSuiteBase implements TestResource {
                 .collect(Collectors.toList());
     }
 
+    private List<String> mapTestDatasetForNest(List<String> testDataset) {
+        return testDataset.stream()
+                .map(JsonUtils::parseObject)
+                .map(JsonNode::toString)
+                .collect(Collectors.toList());
+    }
+
     /**
      * Use custom filtering criteria to query data
      *
@@ -802,6 +901,22 @@ public class ElasticsearchIT extends TestSuiteBase implements TestResource {
         elasticSearchCatalog.dropTable(tablePath, false);
         Assertions.assertFalse(
                 elasticSearchCatalog.tableExists(tablePath), "Index should be dropped");
+
+        // st_index always exist
+        Assertions.assertThrows(
+                DatabaseAlreadyExistException.class,
+                () -> elasticSearchCatalog.createDatabase(TablePath.of("", "st_index"), false));
+        Assertions.assertDoesNotThrow(
+                () -> elasticSearchCatalog.createDatabase(TablePath.of("", "st_index"), true));
+
+        // create index
+        Assertions.assertDoesNotThrow(
+                () -> elasticSearchCatalog.createTable(TablePath.of("", "tmp_index"), null, false));
+        Assertions.assertDoesNotThrow(
+                () -> elasticSearchCatalog.dropDatabase(TablePath.of("", "tmp_index"), false));
+        Assertions.assertThrows(
+                DatabaseNotExistException.class,
+                () -> elasticSearchCatalog.dropDatabase(TablePath.of("", "tmp_index"), false));
 
         elasticSearchCatalog.close();
     }

@@ -54,6 +54,13 @@ public class BaseSinkConfig extends KerberosConfig {
                     .defaultValue(CompressFormat.NONE)
                     .withDescription("Compression codec");
 
+    // TODO：Compression is supported during write
+    public static final Option<ArchiveCompressFormat> ARCHIVE_COMPRESS_CODEC =
+            Options.key("archive_compress_codec")
+                    .enumType(ArchiveCompressFormat.class)
+                    .defaultValue(ArchiveCompressFormat.NONE)
+                    .withDescription("Archive compression codec");
+
     public static final Option<CompressFormat> TXT_COMPRESS =
             Options.key("compress_codec")
                     .singleChoice(
@@ -179,6 +186,20 @@ public class BaseSinkConfig extends KerberosConfig {
                                     + "We can add the variable `${now}` or `${uuid}` in the `file_name_expression`, "
                                     + "like `test_${uuid}_${now}`,`${now}` represents the current time, "
                                     + "and its format can be defined by specifying the option `filename_time_format`.");
+
+    public static final Option<Boolean> SINGLE_FILE_MODE =
+            Options.key("single_file_mode")
+                    .booleanType()
+                    .defaultValue(false)
+                    .withDescription(
+                            "Whether to write all data to a single file in each parallelism task");
+
+    public static final Option<Boolean> CREATE_EMPTY_FILE_WHEN_NO_DATA =
+            Options.key("create_empty_file_when_no_data")
+                    .booleanType()
+                    .defaultValue(false)
+                    .withDescription(
+                            "Whether to generate an empty file when there is no data to write");
 
     public static final Option<String> FILENAME_TIME_FORMAT =
             Options.key("filename_time_format")

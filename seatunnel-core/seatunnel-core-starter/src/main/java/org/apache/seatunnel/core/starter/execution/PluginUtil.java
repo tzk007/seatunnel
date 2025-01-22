@@ -17,6 +17,7 @@
 
 package org.apache.seatunnel.core.starter.execution;
 
+import org.apache.seatunnel.shade.com.google.common.collect.Lists;
 import org.apache.seatunnel.shade.com.typesafe.config.Config;
 
 import org.apache.seatunnel.api.common.CommonOptions;
@@ -27,6 +28,7 @@ import org.apache.seatunnel.api.sink.SeaTunnelSink;
 import org.apache.seatunnel.api.source.SeaTunnelSource;
 import org.apache.seatunnel.api.table.catalog.CatalogTable;
 import org.apache.seatunnel.api.table.catalog.CatalogTableUtil;
+import org.apache.seatunnel.api.table.catalog.TablePath;
 import org.apache.seatunnel.api.table.connector.TableSource;
 import org.apache.seatunnel.api.table.factory.Factory;
 import org.apache.seatunnel.api.table.factory.FactoryException;
@@ -43,8 +45,6 @@ import org.apache.seatunnel.plugin.discovery.seatunnel.SeaTunnelFactoryDiscovery
 import org.apache.seatunnel.plugin.discovery.seatunnel.SeaTunnelSinkPluginDiscovery;
 import org.apache.seatunnel.plugin.discovery.seatunnel.SeaTunnelSourcePluginDiscovery;
 import org.apache.seatunnel.plugin.discovery.seatunnel.SeaTunnelTransformPluginDiscovery;
-
-import com.google.common.collect.Lists;
 
 import java.net.URL;
 import java.util.HashMap;
@@ -98,16 +98,10 @@ public class PluginUtil {
             // TODO remove it when all connector use `getProducedCatalogTables`
             SeaTunnelDataType<?> seaTunnelDataType = source.getProducedType();
             final String tableId =
-                    readonlyConfig.getOptional(CommonOptions.RESULT_TABLE_NAME).orElse(DEFAULT_ID);
+                    readonlyConfig.getOptional(CommonOptions.PLUGIN_OUTPUT).orElse(DEFAULT_ID);
             catalogTables =
                     CatalogTableUtil.convertDataTypeToCatalogTables(seaTunnelDataType, tableId);
         }
-
-        //  if (catalogTables.size() != 1) {
-        //      throw new SeaTunnelException(
-        //              String.format("Unsupported table number: %d on flink",
-        // catalogTables.size()));
-        //  }
         return new SourceTableInfo(source, catalogTables);
     }
 
@@ -191,7 +185,7 @@ public class PluginUtil {
             return sink;
         } else {
             if (catalogTables.size() > 1) {
-                Map<String, SeaTunnelSink> sinks = new HashMap<>();
+                Map<TablePath, SeaTunnelSink> sinks = new HashMap<>();
                 ReadonlyConfig readonlyConfig = ReadonlyConfig.fromConfig(sinkConfig);
                 catalogTables.forEach(
                         catalogTable -> {
@@ -209,7 +203,7 @@ public class PluginUtil {
                                             .createSink(context)
                                             .createSink();
                             action.setJobContext(jobContext);
-                            sinks.put(catalogTable.getTablePath().toString(), action);
+                            sinks.put(catalogTable.getTablePath(), action);
                         });
                 return FactoryUtil.createMultiTableSink(sinks, readonlyConfig, classLoader);
             }

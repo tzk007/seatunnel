@@ -17,6 +17,8 @@
 
 package org.apache.seatunnel.connectors.seatunnel.jdbc.internal.dialect.mysql;
 
+import org.apache.seatunnel.shade.com.google.common.base.Preconditions;
+
 import org.apache.seatunnel.api.table.catalog.Column;
 import org.apache.seatunnel.api.table.catalog.PhysicalColumn;
 import org.apache.seatunnel.api.table.converter.BasicTypeDefine;
@@ -30,7 +32,6 @@ import org.apache.seatunnel.connectors.seatunnel.common.source.TypeDefineUtils;
 import org.apache.seatunnel.connectors.seatunnel.jdbc.internal.dialect.DatabaseIdentifier;
 
 import com.google.auto.service.AutoService;
-import com.google.common.base.Preconditions;
 import com.mysql.cj.MysqlType;
 import lombok.extern.slf4j.Slf4j;
 
@@ -42,6 +43,7 @@ public class MySqlTypeConverter implements TypeConverter<BasicTypeDefine<MysqlTy
     // ============================data types=====================
     static final String MYSQL_NULL = "NULL";
     static final String MYSQL_BIT = "BIT";
+    static final String MYSQL_BIT_UNSIGNED = "BIT UNSIGNED";
 
     // -------------------------number----------------------------
     static final String MYSQL_TINYINT = "TINYINT";
@@ -79,6 +81,7 @@ public class MySqlTypeConverter implements TypeConverter<BasicTypeDefine<MysqlTy
     public static final String MYSQL_TIME = "TIME";
     public static final String MYSQL_TIMESTAMP = "TIMESTAMP";
     static final String MYSQL_YEAR = "YEAR";
+    static final String MYSQL_YEAR_UNSIGNED = "YEAR UNSIGNED";
 
     // ------------------------------blob-------------------------
     static final String MYSQL_TINYBLOB = "TINYBLOB";
@@ -141,6 +144,7 @@ public class MySqlTypeConverter implements TypeConverter<BasicTypeDefine<MysqlTy
                 builder.dataType(BasicType.VOID_TYPE);
                 break;
             case MYSQL_BIT:
+            case MYSQL_BIT_UNSIGNED:
                 if (typeDefine.getLength() == null || typeDefine.getLength() <= 0) {
                     builder.dataType(BasicType.BOOLEAN_TYPE);
                 } else if (typeDefine.getLength() == 1) {
@@ -170,6 +174,7 @@ public class MySqlTypeConverter implements TypeConverter<BasicTypeDefine<MysqlTy
             case MYSQL_INT:
             case MYSQL_INTEGER:
             case MYSQL_YEAR:
+            case MYSQL_YEAR_UNSIGNED:
                 builder.dataType(BasicType.INT_TYPE);
                 break;
             case MYSQL_INT_UNSIGNED:

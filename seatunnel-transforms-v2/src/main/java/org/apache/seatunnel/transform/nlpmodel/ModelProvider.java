@@ -25,6 +25,9 @@ public enum ModelProvider {
             "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
             "https://ark.cn-beijing.volces.com/api/v3/embeddings"),
     QIANFAN("", "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/embeddings"),
+    KIMIAI("https://api.moonshot.cn/v1/chat/completions", ""),
+    DEEPSEEK("https://api.deepseek.com/chat/completions", ""),
+    MICROSOFT("", ""),
     CUSTOM("", ""),
     LOCAL("", "");
 

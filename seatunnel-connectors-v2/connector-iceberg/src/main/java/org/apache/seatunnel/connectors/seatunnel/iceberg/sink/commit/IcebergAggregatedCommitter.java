@@ -33,10 +33,11 @@ import java.util.List;
 public class IcebergAggregatedCommitter
         implements SinkAggregatedCommitter<IcebergCommitInfo, IcebergAggregatedCommitInfo> {
 
+    private final IcebergTableLoader tableLoader;
     private final IcebergFilesCommitter filesCommitter;
 
     public IcebergAggregatedCommitter(SinkConfig config, CatalogTable catalogTable) {
-        IcebergTableLoader tableLoader = IcebergTableLoader.create(config, catalogTable).open();
+        this.tableLoader = IcebergTableLoader.create(config, catalogTable);
         this.filesCommitter = IcebergFilesCommitter.of(config, tableLoader);
     }
 
@@ -51,7 +52,8 @@ public class IcebergAggregatedCommitter
 
     private void commitFiles(List<IcebergCommitInfo> commitInfos) {
         for (IcebergCommitInfo icebergCommitInfo : commitInfos) {
-            if (icebergCommitInfo.getResults() == null) {
+            if (icebergCommitInfo.getResults() == null
+                    || icebergCommitInfo.getResults().isEmpty()) {
                 continue;
             }
             filesCommitter.doCommit(icebergCommitInfo.getResults());
@@ -67,5 +69,7 @@ public class IcebergAggregatedCommitter
     public void abort(List<IcebergAggregatedCommitInfo> aggregatedCommitInfo) throws Exception {}
 
     @Override
-    public void close() throws IOException {}
+    public void close() throws IOException {
+        this.tableLoader.close();
+    }
 }

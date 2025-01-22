@@ -17,8 +17,8 @@
 
 package org.apache.seatunnel.connectors.seatunnel.file.sink.writer;
 
+import org.apache.seatunnel.api.table.catalog.CatalogTable;
 import org.apache.seatunnel.api.table.type.SeaTunnelRow;
-import org.apache.seatunnel.api.table.type.SeaTunnelRowType;
 import org.apache.seatunnel.common.exception.CommonError;
 import org.apache.seatunnel.common.exception.CommonErrorCodeDeprecated;
 import org.apache.seatunnel.connectors.seatunnel.file.exception.FileConnectorErrorCode;
@@ -34,7 +34,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.LinkedHashMap;
 
-public class BinaryWriteStrategy extends AbstractWriteStrategy {
+public class BinaryWriteStrategy extends AbstractWriteStrategy<FSDataOutputStream> {
 
     private final LinkedHashMap<String, FSDataOutputStream> beingWrittenOutputStream;
     private final LinkedHashMap<String, Long> partIndexMap;
@@ -43,12 +43,17 @@ public class BinaryWriteStrategy extends AbstractWriteStrategy {
         super(fileSinkConfig);
         this.beingWrittenOutputStream = new LinkedHashMap<>();
         this.partIndexMap = new LinkedHashMap<>();
+        if (fileSinkConfig.isCreateEmptyFileWhenNoData()) {
+            throw new FileConnectorException(
+                    FileConnectorErrorCode.FORMAT_NOT_SUPPORT,
+                    "BinaryWriteStrategy does not support generating empty files when no data is written.");
+        }
     }
 
     @Override
-    public void setSeaTunnelRowTypeInfo(SeaTunnelRowType seaTunnelRowType) {
-        super.setSeaTunnelRowTypeInfo(seaTunnelRowType);
-        if (!seaTunnelRowType.equals(BinaryReadStrategy.binaryRowType)) {
+    public void setCatalogTable(CatalogTable catalogTable) {
+        super.setCatalogTable(catalogTable);
+        if (!catalogTable.getSeaTunnelRowType().equals(BinaryReadStrategy.binaryRowType)) {
             throw new FileConnectorException(
                     FileConnectorErrorCode.FORMAT_NOT_SUPPORT,
                     "BinaryWriteStrategy only supports binary format, please read file with `BINARY` format, and do not change schema in the transform.");
@@ -88,7 +93,8 @@ public class BinaryWriteStrategy extends AbstractWriteStrategy {
         }
     }
 
-    private FSDataOutputStream getOrCreateOutputStream(@NonNull String filePath) {
+    @Override
+    public FSDataOutputStream getOrCreateOutputStream(@NonNull String filePath) {
         FSDataOutputStream fsDataOutputStream = beingWrittenOutputStream.get(filePath);
         if (fsDataOutputStream == null) {
             try {

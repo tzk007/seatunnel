@@ -17,6 +17,8 @@
 
 package org.apache.seatunnel.e2e.connector.starrocks;
 
+import org.apache.seatunnel.shade.com.google.common.collect.Lists;
+
 import org.apache.seatunnel.api.table.catalog.CatalogTable;
 import org.apache.seatunnel.api.table.catalog.TablePath;
 import org.apache.seatunnel.api.table.type.SeaTunnelRow;
@@ -38,7 +40,6 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.output.Slf4jLogConsumer;
 import org.testcontainers.lifecycle.Startables;
 
-import com.google.common.collect.Lists;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
@@ -361,7 +362,7 @@ public class StarRocksIT extends TestSuiteBase implements TestResource {
                         "root",
                         PASSWORD,
                         String.format(URL, starRocksServer.getHost()),
-                        "CREATE TABLE IF NOT EXISTS `${database}`.`${table}` (\n ${rowtype_fields}\n ) ENGINE=OLAP \n  DUPLICATE KEY(`BIGINT_COL`) \n  DISTRIBUTED BY HASH (BIGINT_COL) BUCKETS 1 \n PROPERTIES (\n   \"replication_num\" = \"1\", \n  \"in_memory\" = \"false\" , \n  \"storage_format\" = \"DEFAULT\"  \n )");
+                        "CREATE TABLE IF NOT EXISTS `${database}`.`${table}` (\n ${rowtype_fields}\n ) ENGINE=OLAP \n  DUPLICATE KEY(`BIGINT_COL`) \n COMMENT '${comment}' \n DISTRIBUTED BY HASH (BIGINT_COL) BUCKETS 1 \n PROPERTIES (\n   \"replication_num\" = \"1\", \n  \"in_memory\" = \"false\" , \n  \"storage_format\" = \"DEFAULT\"  \n )");
         starRocksCatalog.open();
         CatalogTable catalogTable = starRocksCatalog.getTable(tablePathStarRocksSource);
         // sink tableExists ?

@@ -55,7 +55,7 @@ public class BinaryReadStrategy extends AbstractReadStrategy {
             throws IOException, FileConnectorException {
         try (InputStream inputStream = hadoopFileSystemProxy.getInputStream(path)) {
             String relativePath;
-            if (basePath.isFile()) {
+            if (hadoopFileSystemProxy.isFile(basePath.getAbsolutePath())) {
                 relativePath = basePath.getName();
             } else {
                 relativePath =
@@ -77,6 +77,7 @@ public class BinaryReadStrategy extends AbstractReadStrategy {
                 }
                 SeaTunnelRow row = new SeaTunnelRow(new Object[] {buffer, relativePath, partIndex});
                 buffer = new byte[1024];
+                row.setTableId(tableId);
                 output.collect(row);
                 partIndex++;
             }
