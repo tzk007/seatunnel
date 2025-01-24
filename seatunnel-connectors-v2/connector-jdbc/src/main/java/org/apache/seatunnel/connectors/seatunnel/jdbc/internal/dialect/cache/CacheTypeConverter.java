@@ -167,7 +167,9 @@ public class CacheTypeConverter implements TypeConverter<BasicTypeDefine> {
                 builder.dataType(BasicType.SHORT_TYPE);
                 break;
             case Cache_FLOAT:
-                builder.dataType(BasicType.FLOAT_TYPE);
+                //                builder.dataType(BasicType.FLOAT_TYPE);
+                builder.dataType(BasicType.STRING_TYPE);
+                builder.columnLength(charOrBinaryLength);
                 break;
             case Cache_DOUBLE:
             case Cache_REAL:
