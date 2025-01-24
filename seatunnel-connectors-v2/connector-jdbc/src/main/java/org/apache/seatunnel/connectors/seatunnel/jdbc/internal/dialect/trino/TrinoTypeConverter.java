@@ -39,7 +39,7 @@ import java.util.Objects;
 public class TrinoTypeConverter implements TypeConverter<BasicTypeDefine<ClientStandardTypes>> {
 
     // ============================data types=====================
-    public static final String TRINO_NULL = "NULL";
+    public static final String TRINO_NULL = "UNKNOWN";
 
     // -------------------------number----------------------------
     public static final String TRINO_TINYINT = "TINYINT";
@@ -104,6 +104,7 @@ public class TrinoTypeConverter implements TypeConverter<BasicTypeDefine<ClientS
     @Override
     public Column convert(BasicTypeDefine typeDefine) {
         Long typeDefineLength = typeDefine.getLength();
+        log.debug("-------------> typeDefineLength: {}", typeDefineLength);
         PhysicalColumn.PhysicalColumnBuilder builder =
                 PhysicalColumn.builder()
                         .name(typeDefine.getName())
@@ -114,6 +115,9 @@ public class TrinoTypeConverter implements TypeConverter<BasicTypeDefine<ClientS
                         .defaultValue(typeDefine.getDefaultValue())
                         .comment(typeDefine.getComment());
         String TrinoDataType = typeDefine.getDataType().toUpperCase();
+
+        log.debug("-------------> typeDefine:{}", typeDefine);
+        log.debug("-------------> TrinoDataType:{}", TrinoDataType);
         long charOrBinaryLength =
                 Objects.nonNull(typeDefineLength) && typeDefineLength > 0 ? typeDefineLength : 1;
         switch (TrinoDataType) {

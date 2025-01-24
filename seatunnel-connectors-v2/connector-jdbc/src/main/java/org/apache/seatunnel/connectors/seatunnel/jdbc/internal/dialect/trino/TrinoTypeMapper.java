@@ -19,13 +19,14 @@ package org.apache.seatunnel.connectors.seatunnel.jdbc.internal.dialect.trino;
 
 import org.apache.seatunnel.api.table.catalog.Column;
 import org.apache.seatunnel.api.table.converter.BasicTypeDefine;
-import org.apache.seatunnel.connectors.seatunnel.common.source.TypeDefineUtils;
 import org.apache.seatunnel.connectors.seatunnel.jdbc.internal.dialect.JdbcDialectTypeMapper;
+
+import lombok.extern.slf4j.Slf4j;
 
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.util.Arrays;
 
+@Slf4j
 public class TrinoTypeMapper implements JdbcDialectTypeMapper {
 
     @Override
@@ -36,15 +37,18 @@ public class TrinoTypeMapper implements JdbcDialectTypeMapper {
     @Override
     public Column mappingColumn(ResultSetMetaData metadata, int colIndex) throws SQLException {
         String columnName = metadata.getColumnLabel(colIndex);
-        // e.g. tinyint unsigned
         String nativeType = metadata.getColumnTypeName(colIndex);
+        log.debug("-------------> nativeType : {}", nativeType);
         int isNullable = metadata.isNullable(colIndex);
         int precision = metadata.getPrecision(colIndex);
         int scale = metadata.getScale(colIndex);
 
-        if (Arrays.asList("CHAR", "VARCHAR", "ENUM").contains(nativeType)) {
-            long octetLength = TypeDefineUtils.charTo4ByteLength((long) precision);
-            precision = (int) Math.max(precision, octetLength);
+        nativeType = nativeType.toUpperCase();
+        if (nativeType.startsWith("VARCHAR") || nativeType.startsWith("CHAR")) {
+            int index = nativeType.indexOf('(');
+            if (index != -1) {
+                nativeType = nativeType.substring(0, index);
+            }
         }
 
         BasicTypeDefine typeDefine =
