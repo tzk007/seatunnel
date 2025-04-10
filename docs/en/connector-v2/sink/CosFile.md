@@ -1,3 +1,5 @@
+import ChangeLog from '../changelog/connector-file-cos.md';
+
 # CosFile
 
 > Cos file sink connector
@@ -46,6 +48,7 @@ By default, we use 2PC commit to ensure `exactly-once`
 | file_name_expression                  | string  | no       | "${transactionId}"                         | Only used when custom_filename is true                                                                                                                                 |
 | filename_time_format                  | string  | no       | "yyyy.MM.dd"                               | Only used when custom_filename is true                                                                                                                                 |
 | file_format_type                      | string  | no       | "csv"                                      |                                                                                                                                                                        |
+| filename_extension                    | string  | no       | -                                          | Override the default file name extensions with custom file name extensions. E.g. `.xml`, `.json`, `dat`, `.customtype`                                                 |
 | field_delimiter                       | string  | no       | '\001'                                     | Only used when file_format is text                                                                                                                                     |
 | row_delimiter                         | string  | no       | "\n"                                       | Only used when file_format is text                                                                                                                                     |
 | have_partition                        | boolean | no       | false                                      | Whether you need processing partitions.                                                                                                                                |
@@ -59,6 +62,7 @@ By default, we use 2PC commit to ensure `exactly-once`
 | common-options                        | object  | no       | -                                          |                                                                                                                                                                        |
 | max_rows_in_memory                    | int     | no       | -                                          | Only used when file_format is excel.                                                                                                                                   |
 | sheet_name                            | string  | no       | Sheet${Random number}                      | Only used when file_format is excel.                                                                                                                                   |
+| csv_string_quote_mode                 | enum    | no       | MINIMAL                                    | Only used when file_format is csv.                                                                                                                                     |
 | xml_root_tag                          | string  | no       | RECORDS                                    | Only used when file_format is xml.                                                                                                                                     |
 | xml_row_tag                           | string  | no       | RECORD                                     | Only used when file_format is xml.                                                                                                                                     |
 | xml_use_attr_format                   | boolean | no       | -                                          | Only used when file_format is xml.                                                                                                                                     |
@@ -107,7 +111,7 @@ Only used when `custom_filename` is `true`
 
 When the format in the `file_name_expression` parameter is `xxxx-${now}` , `filename_time_format` can specify the time format of the path, and the default value is `yyyy.MM.dd` . The commonly used time formats are listed as follows:
 
-| Symbol |    Description     |
+| Symbol | Description        |
 |--------|--------------------|
 | y      | Year               |
 | M      | Month              |
@@ -199,6 +203,14 @@ When File Format is Excel,The maximum number of data items that can be cached in
 
 Writer the sheet of the workbook
 
+### csv_string_quote_mode [string]
+
+When File Format is CSV,The string quote mode of CSV.
+
+- ALL: All String fields will be quoted.
+- MINIMAL: Quotes fields which contain special characters such as a the field delimiter, quote character or any of the characters in the line separator string.
+- NONE: Never quotes fields. When the delimiter occurs in data, the printer prefixes it with the escape character. If the escape character is not set, format validation throws an exception.
+
 ### xml_root_tag [string]
 
 Specifies the tag name of the root element within the XML file.
@@ -289,7 +301,6 @@ For orc file format simple config
 
 ## Changelog
 
-### next version
+<ChangeLog />
 
-- Add file cos sink connector ([4979](https://github.com/apache/seatunnel/pull/4979))
 
