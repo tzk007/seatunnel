@@ -1,7 +1,6 @@
 package org.apache.seatunnel.connectors.seatunnel.jdbc.internal.dialect.cache;
 
 import org.apache.seatunnel.api.table.catalog.TablePath;
-import org.apache.seatunnel.common.utils.SeaTunnelException;
 import org.apache.seatunnel.connectors.seatunnel.jdbc.internal.converter.JdbcRowConverter;
 import org.apache.seatunnel.connectors.seatunnel.jdbc.internal.dialect.DatabaseIdentifier;
 import org.apache.seatunnel.connectors.seatunnel.jdbc.internal.dialect.JdbcDialect;
@@ -42,8 +41,7 @@ public class CacheDialect implements JdbcDialect {
 
     @Override
     public String hashModForField(String fieldName, int mod) {
-        throw new SeaTunnelException(
-                "The cache database is not supported hash or md5 function. Please remove the partition_column property in config.");
+        return "ABS(ABS(" + quoteIdentifier(fieldName) + ") # " + mod + ")";
     }
 
     @Override
